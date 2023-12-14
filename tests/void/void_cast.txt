@@ -1,0 +1,5 @@
+fun main(){
+    var v:int = 10;
+    var y:int = v as void;
+    return;
+}

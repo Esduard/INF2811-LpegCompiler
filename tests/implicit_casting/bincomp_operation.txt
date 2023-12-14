@@ -1,0 +1,5 @@
+fun main() {
+var f1:int = 2.0 == 2;
+@f1;
+return;
+}

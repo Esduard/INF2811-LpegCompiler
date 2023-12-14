@@ -1,0 +1,9 @@
+fun foo1():int {
+var v:int= new int(10);
+return v;
+}
+
+fun main() {
+var f1:int = foo1();
+return;
+}

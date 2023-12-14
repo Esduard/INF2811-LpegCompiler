@@ -1,0 +1,8 @@
+fun main(){
+    var v:int = 1;
+    var f:double = v as double as int as double;
+    var g:double = 4;
+    @f;
+    @g;
+    return;
+}

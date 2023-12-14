@@ -1,0 +1,5 @@
+fun main(){
+    var v:int = 1;
+    var f:double = v as [int];
+    return;
+}

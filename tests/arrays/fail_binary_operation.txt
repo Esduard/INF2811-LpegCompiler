@@ -1,0 +1,6 @@
+fun main(){
+    var x:[int] = new [int](10);
+    var y:[int] = new [int](10);
+    var z:[int] = x + y;
+    return;
+}

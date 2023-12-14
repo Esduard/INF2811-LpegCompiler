@@ -1,0 +1,12 @@
+fun foo1 (): int{
+
+var f1:int = 1 + 1;
+
+return;
+}
+
+fun main() {
+var f1:int = 1 + 1;
+@f1;
+return;
+}

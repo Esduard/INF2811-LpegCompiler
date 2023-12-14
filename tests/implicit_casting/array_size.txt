@@ -1,0 +1,22 @@
+fun foo1():[int] {
+var sized:double = 10.5;
+var sizei:int = sized;
+var v:[int] = new [int](sized);
+var i:int = 0;
+while (i < sized as int){
+    v[i] = i;
+    i = i + 1;
+};
+return v;
+}
+
+fun main() {
+var sized:double = 10.5;
+var f1:[int] = foo1();
+var i:int = 0;
+while (i < sized as int){
+    @f1[i];
+    i = i + 1;
+};
+return;
+}

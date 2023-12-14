@@ -1,0 +1,10 @@
+fun foo1():double {
+var v:int = 10;
+return v;
+}
+
+fun main() {
+var f1:double = foo1();
+@f1;
+return;
+}

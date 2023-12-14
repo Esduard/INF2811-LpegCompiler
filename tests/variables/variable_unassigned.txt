@@ -1,0 +1,6 @@
+fun main(){
+var v:int;
+v = 1;
+@v;
+return;
+}

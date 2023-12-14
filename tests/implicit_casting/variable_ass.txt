@@ -1,0 +1,7 @@
+fun main() {
+var f1:int = 1 + 2;
+var f2:double = 0.0;
+f2 = f1;
+@f2;
+return;
+}

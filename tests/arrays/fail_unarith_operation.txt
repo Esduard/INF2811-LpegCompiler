@@ -1,0 +1,5 @@
+fun main() {
+var v:[int] = new [int](10);
+var v:[int] = -v; 
+return;
+}

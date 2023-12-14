@@ -1,0 +1,9 @@
+fun foo1(int a, int b):int{
+    return a + b;
+}
+
+fun main() {
+var f1:int = foo1(2);
+@f1;
+return;
+}

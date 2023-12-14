@@ -1,0 +1,12 @@
+fun foo2():int {
+var v:[int] = new [int](10);
+v[0] = 11;
+return v[0];
+}
+
+
+fun main() {
+var f2:int = foo2();
+@f2;
+return;
+}

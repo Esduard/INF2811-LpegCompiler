@@ -1,0 +1,19 @@
+fun foo1():[int] {
+var v:[int] = new [int](10);
+var i:int = 0;
+while (i < 10){
+    v[i] = i;
+    i = i + 1;
+};
+return v;
+}
+
+fun main() {
+var f1:[int] = foo1();
+var f2:int = 1;
+var f3:double = 3.5;
+@f1;
+@f2;
+@f3;
+return;
+}

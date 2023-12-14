@@ -1,0 +1,13 @@
+fun foo1():int{
+    return 1;
+}
+
+fun main() {
+var v:int = 1;
+foo1();
+return;
+}
+
+fun foo1():int{
+    @v;
+}

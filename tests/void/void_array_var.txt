@@ -1,0 +1,4 @@
+fun main(){
+    var v:[void] = 10;
+    return;
+}

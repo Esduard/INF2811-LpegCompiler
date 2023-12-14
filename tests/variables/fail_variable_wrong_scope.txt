@@ -1,0 +1,19 @@
+fun foo1 (){
+
+    var v1:int = 3;
+    @v1;
+    
+    if 1==1 {
+        var v1:int = 4;
+        @v1;
+    };
+
+    
+}
+
+fun main(){
+var v:int = 1;
+@v;
+foo1();
+return;
+}

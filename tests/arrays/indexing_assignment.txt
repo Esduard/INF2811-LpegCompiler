@@ -1,0 +1,8 @@
+fun main() {
+
+var v:[int] = new [int](10);
+v[4] = 40;
+var f3:int = v[4];
+@f3;
+return;
+}

@@ -1,0 +1,14 @@
+fun foo1():[double] {
+var v:[int] = new [int](10);
+var i:int = 0;
+while (i < 10){
+    v[i] = i;
+    i = i + 1;
+};
+return v;
+}
+
+fun main() {
+var f1:[double] = foo1();
+return;
+}
