@@ -1,0 +1,10 @@
+fun foo (){
+return;    
+}
+
+fun main(){
+var v:[int] = new [int](10);
+var x:int = v[foo()];
+@v;
+return;
+}

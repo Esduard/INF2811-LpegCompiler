@@ -56,15 +56,12 @@ local function foldVar(t)
   return res
 end
 
-local function matchInc(t)
-  -- match increment before or after
-  if t[1] == "++" then
-    return {tag = "inc", var = t[2], opInc = t[1], use_before_inc = true}
-  else
-    return {tag = "inc", var = t[1], opInc = t[2], use_before_inc = false}
-    
-  end
+local function matchPreIncDec(p1,p2)
+  return {tag = "incDec", var = p2, opIncDec = p1, use_after_incDec = true}
+end
 
+local function matchPostIncDec(p1,p2)
+  return {tag = "incDec", var = p1, opIncDec = p2, use_after_incDec = false}
 end
 
 local S = lpeg.V"S"
@@ -159,7 +156,6 @@ local prog = lpeg.P{"defs";
        + Rw"while" * exp * block / node("while", "cond", "body")
        + var * Eq * exp / node("ass", "lhs", "e")
        + Rw"return" * (exp +  lpeg.Cc("void"))/ node("ret", "e")
-       + call
        + exp / node("exp", "e");
   new = Rw"new" * Type * OP * exp * CP / node("newArray", "type", "size");
   parameter = Type * Id / node("parameter", "typeVar" , "id");
@@ -170,7 +166,7 @@ local prog = lpeg.P{"defs";
       + varExp
       + new;
   varExp = var / node("varExp", "var");
-  inc = lpeg.Ct((var * opInc) + (opInc * var)) / matchInc;
+  inc = ((var * opInc) / matchPostIncDec + (opInc * var) / matchPreIncDec);
 
   var = lpeg.Ct((Id) * (OBB  * exp * CBB)^0) * S / foldVar;
   call = Id * OP * (arguments)^-1 * CP / node("call", "name", "arguments");

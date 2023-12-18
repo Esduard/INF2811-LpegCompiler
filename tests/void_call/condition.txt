@@ -1,0 +1,10 @@
+fun foo (){
+return;    
+}
+
+fun main(){
+if foo() {
+    var x:int = 1;
+};
+return;
+}

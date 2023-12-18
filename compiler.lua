@@ -160,6 +160,11 @@ function Compiler:stringToTypeTable(string)
   return table
 end
 
+function Compiler:typeTabletoLLVMCode(typeTable)
+  local string = self:typeTableToString(typeTable)
+  return self:getLLVMCode(string)
+end
+
 function Compiler:findVar(id)
   local vars = self.vars
   for i = #vars, 1, -1 do
@@ -246,6 +251,10 @@ function Compiler:codeExp_indexed(exp)
 
   local indexingExpTable = self:codeExp(exp.index)
 
+  if self:isVoidType(indexingExpTable.type) then
+    self:CompilerError(string.format("cannot use index of type %s \n", self:typeTableToString(indexingExpTable.type)))
+  end
+
   if self:typeTableToString(indexingExpTable.type) ~= 'int' then
     self:CompilerError("index of array operation is not int\n")
   end
@@ -286,7 +295,11 @@ function Compiler:verify_and_emit_cast(tableE,castingTypeTable)
     self:CompilerError("casting element to array type not permitted\n")
   end
 
-  if castingTypeLLVM == 'void' or tableE.type == 'void' then
+  if castingTypeLLVM == 'void' then
+    self:CompilerError("casting to void not permitted\n")
+  end
+
+  if tableE.type == 'void' then
     self:CompilerError("casting void not permitted\n")
   end
 
@@ -301,7 +314,10 @@ end
 
 function Compiler:codeExp_cast(exp)
   local tableE = self:codeExp(exp.e)
-  local castingType = self:typeTabletoLLVMCode(exp.type)
+
+  if self:isVoidType(tableE.type) then
+    self:CompilerError(string.format("cannot cast expression of type %s \n", self:typeTableToString(tableE.type)))
+  end
 
   return self:verify_and_emit_cast(tableE,exp.type)
 
@@ -309,6 +325,10 @@ end
 
 function Compiler:codeExp_unarith(exp)
   local tableE = self:codeExp(exp.e)
+
+  if self:isVoidType(tableE.type) then
+    self:CompilerError(string.format("cannot make unarith operation on type %s \n", self:typeTableToString(tableE.type)))
+  end
 
   if tableE.type.tag == "arrayType" then
     self:CompilerError("unarith operation on array not permitted")
@@ -318,21 +338,26 @@ function Compiler:codeExp_unarith(exp)
   local llvmCode = self:typeTabletoLLVMCode(tableE.type)
   local subType = binAOps[llvmCode]["-"]
 
+  
+  local zeroReg = {val = '0', type = self:stringToTypeTable('i32')}
+
   --cast zero to the expression type if it is not i32 already
-  local zeroResCast = {val = '0', type = self:stringToTypeTable('i32')}
   if self:typeTableToString(tableE.type) ~= 'i32' then
     local zeroExp = {tag = "number int", num = 0 }
-    local zeroExpcast = { op = tableE.type, e = zeroExp};
-    zeroResCast = self:codeExp_cast(zeroExpcast)
+    local zeroExpcast = {tag = "cast", op = tableE.type, e = zeroExp};
+    zeroReg = self:codeExp(zeroExpcast)
   end
+
   local res = self:newTemp()
-  io.write(string.format("%s = %s %s %s, %s\n", res, subType, tableE.type, zeroResCast.val, tableE.val))
+  io.write(string.format("%s = %s %s %s, %s\n", res, subType, tableE.type, zeroReg.val, tableE.val))
   return {val = res, type = tableE.type }
 end
 
+-- unused function to verify different types in binary operations.
+-- unused because of implicit casting
 function Compiler:verifyTypeMismatch(typeR1,typeR2)
   if not Utils:deepCompare(typeR1,typeR2) then
-    io.stderr:write(string.format("mismatch type between binarith operators\n"))
+    io.stderr:write(string.format("mismatch type between binary operators\n"))
     os.exit()
   end
 end
@@ -367,10 +392,17 @@ end
 function Compiler:codeExp_binarith(exp)
   local tableR1 = self:codeExp(exp.e1)
   local tableR2 = self:codeExp(exp.e2)
+
+  if self:isVoidType(tableR1.type) or self:isVoidType(tableR2.type) then
+    self:CompilerError(string.format("cannot make binarith operation on types %s and %s \n", self:typeTableToString(tableR1.type), self:typeTableToString(tableR2.type)))
+  end
+
   local res = self:newTemp()
 
   local typeTableR1 = tableR1.type
   local typeTableR2 = tableR2.type
+
+  
 
   if typeTableR1.tag == 'arrayType' or typeTableR2.tag == 'arrayType' then
     self:CompilerError("binarith operation on arrays not permitted")
@@ -380,7 +412,6 @@ function Compiler:codeExp_binarith(exp)
   tableR1,tableR2 = self:castToMostPrecise(tableR1,tableR2)
   
   local llvmCodeR1 = self:typeTabletoLLVMCode(tableR1.type)
-  local llvmCodeR2 = self:typeTabletoLLVMCode(tableR2.type)
 
   io.write(string.format("%s = %s %s %s, %s\n",
               res, binAOps[llvmCodeR1][exp.op], llvmCodeR1, tableR1.val, tableR2.val))
@@ -390,6 +421,11 @@ end
 function Compiler:codeExp_bincomp(exp)
   local tableR1 = self:codeExp(exp.e1)
   local tableR2 = self:codeExp(exp.e2)
+
+  if self:isVoidType(tableR1.type) or self:isVoidType(tableR2.type) then
+    self:CompilerError(string.format("cannot make bincomp operation on types %s and %s \n", self:typeTableToString(tableR1.type), self:typeTableToString(tableR2.type)))
+  end
+
   local res = self:newTemp()
   local conv = self:newTemp()
 
@@ -404,12 +440,13 @@ function Compiler:codeExp_bincomp(exp)
   tableR1,tableR2 = self:castToMostPrecise(tableR1,tableR2)
 
   local llvmCodeR1 = self:typeTabletoLLVMCode(tableR1.type)
-  local llvmCodeR2 = self:typeTabletoLLVMCode(tableR2.type)
 
   io.write(string.format("%s = %s %s %s %s, %s\n",
               res,binCtypes[llvmCodeR1], binCOps[llvmCodeR1][exp.op],llvmCodeR1 ,tableR1.val, tableR2.val))
   io.write(string.format("%s = zext i1 %s to i32\n",
   conv, res))
+
+  -- always return i32 from bincomp
   return {val = conv, type = self:stringToTypeTable('i32') }
 end
 
@@ -419,19 +456,26 @@ function Compiler:codeExp_call(exp)
 
   local llvmCode = self:typeTabletoLLVMCode(funcTypeTable)
 
-  if llvmCode == 'void' then
-    io.stderr:write(string.format("called void function as expression\n"))
-    os.exit()
-  end
-
   local list_arguments_to_exps = self:getFunctionArguments(exp)
 
-  local reg = self:newTemp()
-  io.write(string.format("%s = ", reg))
+  local reg = nil
+  if llvmCode ~= 'void' then
+    reg = self:newTemp()
+    io.write(string.format("%s = ", reg))
+  end
   self:codeCall(llvmCode, exp.name, list_arguments_to_exps)
-  return {val = reg, type = funcTypeTable }
+
+  if llvmCode ~= 'void' then
+    return {val = reg, type = funcTypeTable }
+  else
+    return {type = funcTypeTable}
+  end
+
+  
+  
 end
 
+-- function to help with betting the byte size of a type for array alocation
 function Compiler:getTypeByteSize(typeNode)
   if typeNode.array.tag == 'primitiveType' and typeNode.array.type == 'int' then
     return 4
@@ -450,6 +494,7 @@ function Compiler:codeExp_newArray(exp)
   if self:isVoidType(exp.type) then
     self:CompilerError(string.format("cannot declare array of type %s \n", self:typeTableToString(exp.type)))
   end
+
   --implicit casting to int 
   sizeExpTable = self:verify_and_emit_cast(sizeExpTable,self:stringToTypeTable('i32'))
 
@@ -470,7 +515,7 @@ function Compiler:codeExp_newArray(exp)
   return {val = ptrArray, type = exp.type}
 end
 
-function Compiler:codeExp_inc(st)
+function Compiler:codeExp_incDec(st)
   local lhsTable = self:codeExp(st.var)
 
   local varExp = self:codeExp({tag = "varExp", var = st.var})
@@ -480,7 +525,7 @@ function Compiler:codeExp_inc(st)
   -- op on varExp
   local resOp = self:newTemp()
 
-  local op = string.sub(st.opInc, 1, 1)
+  local op = string.sub(st.opIncDec, 1, 1)
 
   local opLLVM = binAOps[llvmCode][op]
 
@@ -489,10 +534,11 @@ function Compiler:codeExp_inc(st)
   -- store value on lhsTable
   io.write(string.format("store %s %s, ptr %s\n", llvmCode, resOp, lhsTable.val))
 
-  if st.use_before_inc then
-    return {val = varExp.val, type = varExp.type}
-  else
+  if st.use_after_incDec then
     return {val = resOp, type = varExp.type}
+  else
+    return {val = varExp.val, type = varExp.type}
+    
   end
 
 end
@@ -511,21 +557,20 @@ function Compiler:codeExp(exp)
   elseif tag == "bincomp" then return self:codeExp_bincomp(exp)
   elseif tag == "call" then return self:codeExp_call(exp)
   elseif tag == "newArray" then return self:codeExp_newArray(exp)
-  elseif tag == "inc" then return self:codeExp_inc(exp)
+  elseif tag == "incDec" then return self:codeExp_incDec(exp)
   else
     io.stderr:write(string.format("%s : expression not yet implemented\n", tag))
     os.exit()
   end
 end
 
-local printType = {
-  ["i32"] = "printI",
-  ["double"] = "printD",
-  ["ptr"] = "printP",
-}
-
 function Compiler:codeCond(exp, Ltrue, Lfalse)
   local regTable = self:codeExp(exp)
+
+  if self:isVoidType(regTable.type) then
+    self:CompilerError(string.format("cannot make condition on type %s \n", self:typeTableToString(regTable.type)))
+  end
+
   local llvmCode = self:typeTabletoLLVMCode(regTable.type)
 
   local aux = self:newTemp()
@@ -585,6 +630,13 @@ function Compiler:codeStat_while(st)
   self:codeLabel(Lend)
 end
 
+-- all printing types
+local printType = {
+  ["i32"] = "printI",
+  ["double"] = "printD",
+  ["ptr"] = "printP",
+}
+
 function Compiler:codeStat_print(st)
   local regTable = self:codeExp(st.e)
 
@@ -609,7 +661,7 @@ function Compiler:codeStat_exp(st)
 end
 
 function Compiler:createVar(id, type, reg)
-  -- verify if variable is already used by comparing id value in the table with function argument id
+  -- verify if variable is already used in current scope by comparing id value in the table with function argument id
   for i = 1, #self.vars do
     if self.vars[i].id == id then
       self:CompilerError(string.format("variable already declared : %s\n", id))
@@ -626,9 +678,6 @@ function Compiler:codeEmptyVar(id, reg, varType)
   self:createVar(id, varType, reg)
 end
 
--- makea function that verifys if the primitiveType is a void type.
--- if it is return true
--- if its an arrayTYpe recursively call this function
 function Compiler:isVoidType(typeTable)
   if typeTable.tag == 'primitiveType' then
     if typeTable.type == 'void' then
@@ -648,6 +697,7 @@ function Compiler:codeStat_var(st)
     return
   end
 
+  -- declare non-empty variable
   if self:isVoidType(st.typeVar) then
     self:CompilerError(string.format("cannot declare variable of type %s \n", self:typeTableToString(st.typeVar)))
   end
@@ -702,20 +752,21 @@ function Compiler:codeStat_ret(st)
     return
   end
 
+  -- dont cast arrays in the return statement, instead print the error
+  if regETable.type.tag == 'arrayType' or functionTypeTable.tag == 'arrayType' then
+    if not Utils:deepCompare(regETable.type,functionTypeTable) then
+      self:CompilerError(string.format("mismatch type between returned expression type: %s and function return: %s\n", self:typeTableToString(regETable.type), self:typeTableToString(functionTypeTable)))
+    
+    else
+      -- both are arrays of the same type
+      io.write(string.format("ret %s %s\n", llvmCode, regETable.val))
+    end
+    
+  end
   -- make casting only if both are primitives 
-  if regETable.type.tag == 'primitiveType' and functionTypeTable.tag == 'primitiveType' then
-    regETable = self:verify_and_emit_cast(regETable,functionTypeTable)
-    io.write(string.format("ret %s %s\n", llvmCode, regETable.val))
-    return
-  end
-  
-  -- regETable.type.tag == 'arrayType' or functionTypeTable.tag == 'arrayType'
-  if not Utils:deepCompare(regETable.type,functionTypeTable) then
-    self:CompilerError(string.format("mismatch type between returned expression type: %s and function return: %s\n", self:typeTableToString(regETable.type), self:typeTableToString(functionTypeTable)))
-  end
-  
-  -- both are arrays of the same type
-  io.write(string.format("ret %s %s\n", llvmCode, regETable.val))
+  -- regETable.type.tag == 'primitiveType' or functionTypeTable.tag == 'primitiveType'
+  regETable = self:verify_and_emit_cast(regETable,functionTypeTable)
+  io.write(string.format("ret %s %s\n", llvmCode, regETable.val))  
 end
 
 function Compiler:codeStat (st)
@@ -731,7 +782,6 @@ function Compiler:codeStat (st)
   elseif tag == "var" then self:codeStat_var(st)
   elseif tag == "ass" then self:codeStat_ass(st)
   elseif tag == "ret" then self:codeStat_ret(st)
-  elseif tag == "inc" then self:codeStat_inc(st)
   else
     io.stderr:write(string.format("%s: statement not yet implemented\n",tag))
     os.exit()
@@ -741,11 +791,6 @@ end
 local poscode = [[
 }
 ]]
-
-function Compiler:typeTabletoLLVMCode(typeTable)
-  local string = self:typeTableToString(typeTable)
-  return self:getLLVMCode(string)
-end
 
 function Compiler:codeParam(func_name,paramsIdList)
   local list_param_to_reg = {}

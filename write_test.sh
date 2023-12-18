@@ -16,7 +16,6 @@ filename="${filename%.*}"
 
 echo "directory: $directory"
 echo "Filename without extension: $filename"
-echo "File extension: $extension"
 
 # Delete the specified files if they exist
 rm -f main.ll a.out main.s "$directory/$filename.err" "$directory/$filename.res"

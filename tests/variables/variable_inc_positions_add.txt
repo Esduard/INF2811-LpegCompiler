@@ -1,0 +1,10 @@
+fun main(){
+var i:int = 5;
+var a:int = ++i;
+@a;
+@i;
+i = 5;
+var b:int = i++;
+@b;
+@i;
+}
