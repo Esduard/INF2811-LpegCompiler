@@ -647,15 +647,6 @@ function Compiler:codeStat_print(st)
   end
   io.write(string.format("call void @%s(%s %s)\n", currPrintType, llvmCode, regTable.val))
 end
-
-function Compiler:codeStat_call(st)
-  self:verifyFunctionExists(st.name)
-  local list_arguments_to_exps = self:getFunctionArguments(st)
-  local funcTypeTable = self.funcTypeTables[st.name]
-  local llvmCode = self:typeTabletoLLVMCode(funcTypeTable)
-  self:codeCall(llvmCode, st.name, list_arguments_to_exps)
-end
-
 function Compiler:codeStat_exp(st)
   self:codeExp(st.e)
 end
@@ -777,7 +768,6 @@ function Compiler:codeStat (st)
   elseif tag == "if" then self:codeStat_if(st)
   elseif tag == "while" then self:codeStat_while(st)
   elseif tag == "print" then self:codeStat_print(st)
-  elseif tag == "call" then self:codeStat_call(st)
   elseif tag == "exp" then self:codeStat_exp(st)
   elseif tag == "var" then self:codeStat_var(st)
   elseif tag == "ass" then self:codeStat_ass(st)
