@@ -99,7 +99,7 @@ local double = (digit^1) * lpeg.S('.') * (digit^1) / tonumber * S
 local opA = lpeg.C(lpeg.S("+-")) * S
 local opM = lpeg.C(lpeg.S("*/")) * S
 local opUn = lpeg.C("-") * S
-local opInc = (lpeg.C("++")  + lpeg.C("--")) * S
+local opincDec = (lpeg.C("++")  + lpeg.C("--")) * S
 
 local opC = lpeg.C(lpeg.S(">") * lpeg.S("=") + lpeg.S("<") * lpeg.S("=") + 
   lpeg.S("=") * lpeg.S("=") + lpeg.S("!") * lpeg.S("=") + lpeg.S(">") + lpeg.S("<")) * S
@@ -136,7 +136,7 @@ local parameter = lpeg.V"parameter"
 local new = lpeg.V"new"
 local postfix = lpeg.V"postfix"
 local postfixCast = lpeg.V"postfixCast"
-local inc = lpeg.V"inc"
+local incDec = lpeg.V"incDec"
 local varExp = lpeg.V"varExp"
 
 
@@ -162,11 +162,11 @@ local prog = lpeg.P{"defs";
   primary = double / node("number double", "num")
       + integer / node("number int", "num")
       + OP * lpeg.V"exp" * CP
-      + inc
+      + incDec
       + varExp
       + new;
   varExp = var / node("varExp", "var");
-  inc = ((var * opInc) / matchPostIncDec + (opInc * var) / matchPreIncDec);
+  incDec = ((var * opincDec) / matchPostIncDec + (opincDec * var) / matchPreIncDec);
 
   var = lpeg.Ct((Id) * (OBB  * exp * CBB)^0) * S / foldVar;
   call = Id * OP * (arguments)^-1 * CP / node("call", "name", "arguments");
